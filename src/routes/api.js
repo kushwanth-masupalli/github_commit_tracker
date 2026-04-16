@@ -1,29 +1,22 @@
 const express = require("express");
-const store = require("../models/store");
+const dbService = require("../services/dbService");
 
 const router = express.Router();
 
-// leaderboard
-router.get("/leaderboard", (req, res) => {
-  res.json(store.getLeaderboard());
+router.get("/leaderboard", async (req, res) => {
+  const data = await dbService.getLeaderboard();
+  res.json(data);
 });
 
-// all commits
-router.get("/commits", (req, res) => {
-  res.json(store.commits);
+router.get("/commits", async (req, res) => {
+  const data = await dbService.getCommits();
+  res.json(data);
 });
 
-// repos
-router.get("/repos", (req, res) => {
-  const repos = Object.entries(store.repositories).map(([name, data]) => ({
-    name,
-    commits: data.commits,
-    contributors: [...data.contributors]
-  }));
-
-  res.json(repos);
+router.get("/repos", async (req, res) => {
+  const data = await dbService.getRepos();
+  res.json(data);
 });
-
 // scoring rules
 router.get("/rules", (req, res) => {
   res.json(store.rules);

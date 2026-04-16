@@ -4,7 +4,8 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const helmet = require("helmet");
-
+const connectDB = require("./config/db");
+connectDB();
 const webhookRoute = require("./routes/webhook");
 const apiRoutes = require("./routes/api");
 

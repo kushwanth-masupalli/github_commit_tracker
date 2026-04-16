@@ -1,11 +1,11 @@
 const express = require("express");
 const verifySignature = require("../middleware/webhookAuth");
 const { parsePushEvent } = require("../services/githubParser");
-const store = require("../models/store");
+const dbService = require("../services/dbService");
 
 const router = express.Router();
 
-router.post("/", verifySignature, (req, res) => {
+router.post("/", verifySignature, async (req, res) => {
   try {
     const payload = JSON.parse(req.body.toString());
 
@@ -15,7 +15,7 @@ router.post("/", verifySignature, (req, res) => {
 
     const commits = parsePushEvent(payload);
 
-    commits.forEach((c) => store.addCommit(c));
+    await Promise.all(commits.map(c => dbService.addCommit(c)));
 
     res.status(200).send("Processed");
   } catch (err) {
