@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DevPulse Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    header {
+      padding: 20px;
+      text-align: center;
+      background: #020617;
+      font-size: 24px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    .container {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #020617;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(56,189,248,0.2);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #38bdf8;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      border-bottom: 1px solid #334155;
+    }
+
+    tr:hover {
+      background: #1e293b;
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .fix { background: #ef4444; }
+    .feature { background: #22c55e; }
+    .refactor { background: #f59e0b; }
+    .docs { background: #3b82f6; }
+    .invalid { background: #64748b; }
+
+  </style>
+</head>
+
+<body>
+
+<header>🚀 DevPulse Dashboard</header>
+
+<div class="container">
+
+  <!-- Leaderboard -->
+  <div class="card">
+    <h2>🏆 Leaderboard</h2>
+    <table id="leaderboard"></table>
+  </div>
+
+  <!-- Repositories -->
+  <div class="card">
+    <h2>📦 Repositories</h2>
+    <table id="repos"></table>
+  </div>
+
+  <!-- Commits -->
+  <div class="card" style="grid-column: span 2;">
+    <h2>📜 Recent Commits</h2>
+    <table id="commits"></table>
+  </div>
+
+</div>
+
+<script>
+const API = "/api";
+
+// fetch leaderboard
+async function loadLeaderboard() {
+  const res = await fetch(`${API}/leaderboard`);
+  const data = await res.json();
+
+  const table = document.getElementById("leaderboard");
+  table.innerHTML = `
+    <tr><th>User</th><th>Score</th><th>Commits</th></tr>
+    ${data.map(u => `
+      <tr>
+        <td>${u.user}</td>
+        <td>${u.score}</td>
+        <td>${u.commits}</td>
+      </tr>
+    `).join("")}
+  `;
+}
+
+// fetch repos
+async function loadRepos() {
+  const res = await fetch(`${API}/repos`);
+  const data = await res.json();
+
+  const table = document.getElementById("repos");
+  table.innerHTML = `
+    <tr><th>Repo</th><th>Commits</th><th>Contributors</th></tr>
+    ${data.map(r => `
+      <tr>
+        <td>${r.name}</td>
+        <td>${r.commits}</td>
+        <td>${r.contributors.length}</td>
+      </tr>
+    `).join("")}
+  `;
+}
+
+// fetch commits
+async function loadCommits() {
+  const res = await fetch(`${API}/commits`);
+  const data = await res.json();
+
+  const table = document.getElementById("commits");
+
+  table.innerHTML = `
+    <tr>
+      <th>Repo</th>
+      <th>Author</th>
+      <th>Message</th>
+      <th>Type</th>
+      <th>Points</th>
+    </tr>
+    ${data.slice(-20).reverse().map(c => `
+      <tr>
+        <td>${c.repo}</td>
+        <td>${c.author}</td>
+        <td>${c.message}</td>
+        <td><span class="badge ${c.type || 'invalid'}">${c.type || 'invalid'}</span></td>
+        <td>${c.points}</td>
+      </tr>
+    `).join("")}
+  `;
+}
+
+// auto refresh
+function init() {
+  loadLeaderboard();
+  loadRepos();
+  loadCommits();
+
+  setInterval(() => {
+    loadLeaderboard();
+    loadRepos();
+    loadCommits();
+  }, 5000);
+}
+
+init();
+</script>
+
+</body>
+</html>
