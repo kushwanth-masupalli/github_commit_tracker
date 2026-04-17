@@ -1,74 +1,69 @@
 const express = require("express");
 const verifySignature = require("../middleware/webhookAuth");
-const { parsePushEvent, parsePullRequestEvent } = require("../services/githubParser");
-const dbService = require("../services/dbService");
+const activityService = require("../services/activityService");
 
 const router = express.Router();
 
-router.post("/", verifySignature, async (req, res) => {
+router.post("/github", verifySignature, async (req, res) => {
   try {
-    const payload = typeof req.body === "string"
-      ? JSON.parse(req.body)
-      : JSON.parse(req.body.toString());
-
     const event = req.headers["x-github-event"];
+    const payload = JSON.parse(req.body.toString("utf8"));
 
-    console.log("📩 EVENT:", event);
-
-    // 🔥 PUSH EVENT
     if (event === "push") {
-      const commits = parsePushEvent(payload);
+      const repo = payload.repository?.name;
+      const commits = payload.commits || [];
 
-      console.log("🔥 Parsed commits:", commits);
-
-      if (!commits || commits.length === 0) {
-        console.log("❌ No commits parsed");
-        return res.status(200).send("No commits");
-      }
-
-      const results = [];
       for (const commit of commits) {
-        console.log("➡️ Sending to DB:", commit);
-        try {
-          const result = await dbService.addCommit(commit);
-          results.push(result);
-          console.log("✅ Successfully saved commit");
-        } catch (dbErr) {
-          console.error("❌ Failed to save commit:", dbErr.message);
-          // Continue processing other commits
-        }
+        await activityService.addActivity({
+          repo,
+          author: commit.author?.username || commit.author?.name || payload.sender?.login || "unknown",
+          message: commit.message,
+          timestamp: new Date(commit.timestamp),
+          url: commit.url
+        });
       }
 
-      console.log(`✅ Processed ${results.length}/${commits.length} commits`);
-      return res.status(200).send("Push processed");
+      return res.status(200).json({
+        message: "Push event processed",
+        commitsProcessed: commits.length
+      });
     }
 
-    // 🔥 PR EVENT
-    if (
-      event === "pull_request" &&
-      payload.action === "closed" &&
-      payload.pull_request.merged
-    ) {
-      const prData = parsePullRequestEvent(payload);
+    if (event === "pull_request") {
+      const action = payload.action;
+      const pr = payload.pull_request;
 
-      console.log("➡️ Sending PR to DB:", prData);
-
-      try {
-        await dbService.addCommit(prData);
-        console.log("✅ Successfully saved PR");
-        return res.status(200).send("PR processed");
-      } catch (dbErr) {
-        console.error("❌ Failed to save PR:", dbErr.message);
-        return res.status(200).send("PR failed to save");
+      if (!pr) {
+        return res.status(400).json({ message: "No pull request data found" });
       }
+
+      if (action === "opened" || action === "closed" || action === "synchronize") {
+        await activityService.addActivity(
+          {
+            repo: payload.repository?.name,
+            author: pr.user?.login || "unknown",
+            message: pr.title,
+            timestamp: new Date(pr.created_at || pr.updated_at || Date.now()),
+            url: pr.html_url
+          },
+          true
+        );
+      }
+
+      return res.status(200).json({
+        message: "Pull request event processed"
+      });
     }
 
-    return res.status(200).send("Ignored");
-
+    return res.status(200).json({
+      message: `Ignored event: ${event}`
+    });
   } catch (err) {
-    console.error("❌ WEBHOOK ERROR:", err.message);
-    console.error("Stack:", err.stack);
-    return res.status(500).send("Error");
+    console.error("❌ Webhook processing error:", err);
+    return res.status(500).json({
+      error: "Failed to process webhook",
+      details: err.message
+    });
   }
 });
 

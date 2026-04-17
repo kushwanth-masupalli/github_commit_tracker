@@ -1,23 +1,30 @@
 const mongoose = require("mongoose");
 
-const commitSchema = new mongoose.Schema({
-  repo: { type: String, required: true },
-  author: { type: String, required: true },
+const commitSchema = new mongoose.Schema(
+  {
+    repo: { type: String, required: true, trim: true },
+    author: { type: String, required: true, trim: true },
 
-  message: String,
-  timestamp: Date,
-  url: String,
+    message: { type: String, required: true, trim: true },
+    timestamp: { type: Date, required: true },
+    url: { type: String, required: true, trim: true },
 
-  type: String,          // feature, fix, etc
-  difficulty: String,    // easy, medium, hard (for PRs)
+    type: { type: String, default: null, trim: true },
+    difficulty: {
+      type: String,
+      enum: ["easy", "medium", "hard", "default", null],
+      default: null
+    },
 
-  points: Number,
+    points: { type: Number, default: 0 },
 
-  source: {              // 🔥 NEW FIELD
-    type: String,
-    enum: ["commit", "pr"],
-    default: "commit"
-  }
-});
+    source: {
+      type: String,
+      enum: ["commit", "pr"],
+      default: "commit"
+    }
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Commit", commitSchema);

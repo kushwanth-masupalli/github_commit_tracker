@@ -8,24 +8,18 @@ const connectDB = require("./config/db");
 
 const app = express();
 
+app.set("trust proxy", true);
+
 connectDB();
 
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
-
 app.use(express.static("public"));
 
-// ✅ WEBHOOK: raw body BEFORE any json parser
-// type: "*/*" catches GitHub's "application/json" content-type too
 const webhookRoute = require("./routes/webhook");
-app.use(
-  "/webhook",
-  express.raw({ type: "*/*" }),
-  webhookRoute
-);
+app.use("/webhook", express.raw({ type: "*/*" }), webhookRoute);
 
-// ✅ JSON parser only for non-webhook routes
 app.use(express.json());
 
 const apiRoutes = require("./routes/api");
