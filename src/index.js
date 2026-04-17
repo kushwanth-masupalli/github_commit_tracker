@@ -6,26 +6,28 @@ const cors = require("cors");
 const helmet = require("helmet");
 const connectDB = require("./config/db");
 
-const app = express(); // ✅ DECLARE app FIRST
+const app = express();
 
 connectDB();
 
-// ✅ MIDDLEWARES
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-// ✅ Serve frontend
 app.use(express.static("public"));
 
-// ✅ WEBHOOK — raw body MUST come before express.json()
+// ✅ WEBHOOK: raw body BEFORE any json parser
+// type: "*/*" catches GitHub's "application/json" content-type too
 const webhookRoute = require("./routes/webhook");
-app.use("/webhook", express.raw({ type: "application/json" }), webhookRoute);
+app.use(
+  "/webhook",
+  express.raw({ type: "*/*" }),
+  webhookRoute
+);
 
-// ✅ JSON body parser for all other routes
+// ✅ JSON parser only for non-webhook routes
 app.use(express.json());
 
-// ✅ API routes
 const apiRoutes = require("./routes/api");
 app.use("/api", apiRoutes);
 
