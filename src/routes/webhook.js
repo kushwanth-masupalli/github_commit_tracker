@@ -23,13 +23,23 @@ router.post("/", verifySignature, async (req, res) => {
 
       if (!commits || commits.length === 0) {
         console.log("❌ No commits parsed");
+        return res.status(200).send("No commits");
       }
 
+      const results = [];
       for (const commit of commits) {
         console.log("➡️ Sending to DB:", commit);
-        await dbService.addCommit(commit);
+        try {
+          const result = await dbService.addCommit(commit);
+          results.push(result);
+          console.log("✅ Successfully saved commit");
+        } catch (dbErr) {
+          console.error("❌ Failed to save commit:", dbErr.message);
+          // Continue processing other commits
+        }
       }
 
+      console.log(`✅ Processed ${results.length}/${commits.length} commits`);
       return res.status(200).send("Push processed");
     }
 
@@ -43,16 +53,22 @@ router.post("/", verifySignature, async (req, res) => {
 
       console.log("➡️ Sending PR to DB:", prData);
 
-      await dbService.addCommit(prData);
-
-      return res.status(200).send("PR processed");
+      try {
+        await dbService.addCommit(prData);
+        console.log("✅ Successfully saved PR");
+        return res.status(200).send("PR processed");
+      } catch (dbErr) {
+        console.error("❌ Failed to save PR:", dbErr.message);
+        return res.status(200).send("PR failed to save");
+      }
     }
 
     return res.status(200).send("Ignored");
 
   } catch (err) {
-    console.error("❌ WEBHOOK ERROR:", err);
-    return res.status(200).send("Handled");
+    console.error("❌ WEBHOOK ERROR:", err.message);
+    console.error("Stack:", err.stack);
+    return res.status(500).send("Error");
   }
 });
 
