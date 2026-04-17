@@ -9,24 +9,31 @@ router.post("/", verifySignature, async (req, res) => {
   try {
     const payload = typeof req.body === "string"
       ? JSON.parse(req.body)
-      : req.body;
+      : JSON.parse(req.body.toString());
 
     const event = req.headers["x-github-event"];
 
-    console.log("📩 Event received:", event);
+    console.log("📩 EVENT:", event);
 
-    // 🔹 PUSH
+    // 🔥 PUSH EVENT
     if (event === "push") {
       const commits = parsePushEvent(payload);
 
       console.log("🔥 Parsed commits:", commits);
 
-      await Promise.all(commits.map(c => dbService.addCommit(c)));
+      if (!commits || commits.length === 0) {
+        console.log("❌ No commits parsed");
+      }
+
+      for (const commit of commits) {
+        console.log("➡️ Sending to DB:", commit);
+        await dbService.addCommit(commit);
+      }
 
       return res.status(200).send("Push processed");
     }
 
-    // 🔹 PR
+    // 🔥 PR EVENT
     if (
       event === "pull_request" &&
       payload.action === "closed" &&
@@ -34,7 +41,7 @@ router.post("/", verifySignature, async (req, res) => {
     ) {
       const prData = parsePullRequestEvent(payload);
 
-      console.log("🔥 Parsed PR:", prData);
+      console.log("➡️ Sending PR to DB:", prData);
 
       await dbService.addCommit(prData);
 
@@ -44,8 +51,8 @@ router.post("/", verifySignature, async (req, res) => {
     return res.status(200).send("Ignored");
 
   } catch (err) {
-    console.error("❌ Webhook error:", err);
-    return res.status(200).send("Handled with error");
+    console.error("❌ WEBHOOK ERROR:", err);
+    return res.status(200).send("Handled");
   }
 });
 

@@ -6,31 +6,30 @@ const cors = require("cors");
 const helmet = require("helmet");
 const connectDB = require("./config/db");
 
+const app = express(); // ✅ DECLARE app FIRST
+
 connectDB();
 
-const webhookRoute = require("./routes/webhook");
-const apiRoutes = require("./routes/api");
-
-const app = express();
-
-// 🔥 Serve frontend
-app.use(express.static("public"));
-
-// 🔥 WEBHOOK FIRST (raw body REQUIRED)
-app.use("/webhook", express.raw({ type: "application/json" }));
-app.use("/webhook", webhookRoute);
-
-// 🔥 OTHER MIDDLEWARES AFTER
-app.use(express.json());
+// ✅ MIDDLEWARES
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-// 🔥 API routes
+// ✅ Serve frontend
+app.use(express.static("public"));
+
+// ✅ WEBHOOK — raw body MUST come before express.json()
+const webhookRoute = require("./routes/webhook");
+app.use("/webhook", express.raw({ type: "application/json" }), webhookRoute);
+
+// ✅ JSON body parser for all other routes
+app.use(express.json());
+
+// ✅ API routes
+const apiRoutes = require("./routes/api");
 app.use("/api", apiRoutes);
 
-// 🔥 PORT FIX (IMPORTANT for Render)
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on ${PORT}`);

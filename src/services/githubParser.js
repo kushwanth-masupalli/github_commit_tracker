@@ -40,14 +40,32 @@ function calculatePRPoints(type, difficulty) {
   if (!rule) return 0;
   return rule[difficulty] || rule.default || 0;
 }
-
-// 🔥 PUSH PARSER (FIXED AUTHOR)
 function parsePushEvent(payload) {
   const repo = payload.repository?.name;
 
-  return (payload.commits || []).map(c => {
+  if (!payload.commits || payload.commits.length === 0) {
+    console.log("❌ No commits in payload");
+    return [];
+  }
+
+  return payload.commits.map(c => {
     const message = c.message;
-    const type = extractType(message);
+
+    const typeMatch = message.match(/^\[(.*?)\]/);
+    const type = typeMatch ? typeMatch[1].toLowerCase() : null;
+
+    const pointsMap = {
+      feature: 10,
+      fix: 7,
+      perf: 9,
+      refactor: 5,
+      test: 5,
+      docs: 2,
+      style: 1,
+      chore: 1
+    };
+
+    const points = type ? (pointsMap[type] || 0) : 0;
 
     const author =
       c.author?.username ||
@@ -55,16 +73,20 @@ function parsePushEvent(payload) {
       payload.sender?.login ||
       "unknown";
 
-    return {
+    const parsed = {
       repo,
       author,
       message,
       timestamp: c.timestamp,
       url: c.url,
       type,
-      points: calculateCommitPoints(type),
+      points,
       source: "commit"
     };
+
+    console.log("✅ Parsed commit:", parsed);
+
+    return parsed;
   });
 }
 
