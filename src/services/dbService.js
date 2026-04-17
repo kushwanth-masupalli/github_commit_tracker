@@ -42,7 +42,8 @@ async function addCommit(commit) {
       dev.commits += 1;
     }
 
-    await dev.save();
+    const devSaved = await dev.save();
+    console.log("✅ Developer updated:", devSaved.username);
 
     // ✅ REPO
     let repo = await Repository.findOne({ name: data.repo });
@@ -61,10 +62,15 @@ async function addCommit(commit) {
       repo.contributors.push(data.author);
     }
 
-    await repo.save();
+    const repoSaved = await repo.save();
+    console.log("✅ Repository updated:", repoSaved.name);
+
+    return { success: true, commitId: saved._id };
 
   } catch (err) {
-    console.error("❌ DB ERROR:", err);
+    console.error("❌ DB ERROR:", err.message);
+    console.error("Stack:", err.stack);
+    throw err; // Re-throw so webhook handler knows it failed
   }
 }
 
