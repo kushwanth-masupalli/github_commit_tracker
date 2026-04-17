@@ -7,25 +7,26 @@ const router = express.Router();
 
 router.post("/", verifySignature, async (req, res) => {
   try {
-    // 🔥 FIX: safe payload parsing
     const payload = typeof req.body === "string"
       ? JSON.parse(req.body)
       : req.body;
 
     const event = req.headers["x-github-event"];
 
-    // ✅ PUSH EVENT
+    console.log("📩 Event received:", event);
+
+    // 🔹 PUSH
     if (event === "push") {
       const commits = parsePushEvent(payload);
 
-      await Promise.all(
-        commits.map(c => dbService.addCommit(c))
-      );
+      console.log("🔥 Parsed commits:", commits);
+
+      await Promise.all(commits.map(c => dbService.addCommit(c)));
 
       return res.status(200).send("Push processed");
     }
 
-    // ✅ PR EVENT (only merged)
+    // 🔹 PR
     if (
       event === "pull_request" &&
       payload.action === "closed" &&
@@ -33,18 +34,17 @@ router.post("/", verifySignature, async (req, res) => {
     ) {
       const prData = parsePullRequestEvent(payload);
 
+      console.log("🔥 Parsed PR:", prData);
+
       await dbService.addCommit(prData);
 
       return res.status(200).send("PR processed");
     }
 
-    // ignore others
     return res.status(200).send("Ignored");
 
   } catch (err) {
     console.error("❌ Webhook error:", err);
-
-    // 🔥 IMPORTANT: NEVER return 400 to GitHub
     return res.status(200).send("Handled with error");
   }
 });

@@ -4,7 +4,8 @@ const Commit = require("../models/Commit");
 
 async function addCommit(commit) {
   try {
-    // 🔹 Normalize fields
+    console.log("🔥 Incoming commit:", commit);
+
     const data = {
       repo: commit.repo,
       author: commit.author,
@@ -14,13 +15,14 @@ async function addCommit(commit) {
       type: commit.type || null,
       difficulty: commit.difficulty || null,
       points: commit.points || 0,
-      source: commit.source || "commit" // commit | pr
+      source: commit.source || "commit"
     };
 
-    // 🔹 Save commit/PR
-    await Commit.create(data);
+    // ✅ SAVE COMMIT
+    const saved = await Commit.create(data);
+    console.log("✅ Saved commit:", saved._id);
 
-    // 🔹 Developer update
+    // ✅ DEVELOPER
     let dev = await Developer.findOne({ username: data.author });
 
     if (!dev) {
@@ -42,7 +44,7 @@ async function addCommit(commit) {
 
     await dev.save();
 
-    // 🔹 Repository update
+    // ✅ REPO
     let repo = await Repository.findOne({ name: data.repo });
 
     if (!repo) {
@@ -62,21 +64,18 @@ async function addCommit(commit) {
     await repo.save();
 
   } catch (err) {
-    console.error("❌ DB Service Error:", err);
+    console.error("❌ DB ERROR:", err);
   }
 }
 
-// 🔹 Leaderboard
 async function getLeaderboard() {
   return Developer.find().sort({ score: -1 });
 }
 
-// 🔹 All commits + PRs
 async function getCommits() {
   return Commit.find().sort({ timestamp: -1 });
 }
 
-// 🔹 Repo stats
 async function getRepos() {
   return Repository.find();
 }

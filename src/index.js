@@ -5,24 +5,33 @@ const morgan = require("morgan");
 const cors = require("cors");
 const helmet = require("helmet");
 const connectDB = require("./config/db");
+
 connectDB();
+
 const webhookRoute = require("./routes/webhook");
 const apiRoutes = require("./routes/api");
 
 const app = express();
-app.use(express.static("public"));
-// IMPORTANT: raw body needed for webhook verification
-app.use("/webhook", express.raw({ type: "application/json" }));
 
+// 🔥 Serve frontend
+app.use(express.static("public"));
+
+// 🔥 WEBHOOK FIRST (raw body REQUIRED)
+app.use("/webhook", express.raw({ type: "application/json" }));
+app.use("/webhook", webhookRoute);
+
+// 🔥 OTHER MIDDLEWARES AFTER
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-app.use("/webhook", webhookRoute);
+// 🔥 API routes
 app.use("/api", apiRoutes);
 
+// 🔥 PORT FIX (IMPORTANT for Render)
+const PORT = process.env.PORT;
 
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on ${PORT}`);
+});

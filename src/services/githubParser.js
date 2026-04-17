@@ -41,7 +41,7 @@ function calculatePRPoints(type, difficulty) {
   return rule[difficulty] || rule.default || 0;
 }
 
-// 🔥 PUSH PARSER
+// 🔥 PUSH PARSER (FIXED AUTHOR)
 function parsePushEvent(payload) {
   const repo = payload.repository?.name;
 
@@ -49,9 +49,15 @@ function parsePushEvent(payload) {
     const message = c.message;
     const type = extractType(message);
 
+    const author =
+      c.author?.username ||
+      c.author?.name ||
+      payload.sender?.login ||
+      "unknown";
+
     return {
       repo,
-      author: c.author?.username || payload.sender?.login, // 🔥 FIX
+      author,
       message,
       timestamp: c.timestamp,
       url: c.url,
@@ -73,7 +79,7 @@ function parsePullRequestEvent(payload) {
 
   return {
     repo,
-    author: pr.user?.login,
+    author: pr.user?.login || "unknown",
     message,
     timestamp: pr.created_at,
     url: pr.html_url,
